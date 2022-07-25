@@ -1,0 +1,4 @@
+<xml>
+    <port>:8080</port>
+    <logdir>/home/ansible/logs</logdir>
+</xml>

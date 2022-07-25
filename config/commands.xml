@@ -1,0 +1,40 @@
+<xml>
+    <task>
+        <name>Update Ubuntu Hosts</name>
+        <command>ansible-playbook /home/ansible/playbooks/update-ubuntu.yml -i /home/ansible/inventory/hosts</command>
+    </task>
+    <task>
+        <name>Create Test File on Hosts</name>
+        <command>ansible-playbook /home/ansible/playbooks/create-testfile.yml -i /home/ansible/inventory/hosts --extra-vars "path=??path?? content=??content?? targets=??hosts??"</command>
+        <form>
+            <input>
+                <type>text</type>
+                <label>Path to create file</label>
+                <var>path</var>
+            </input>
+            <input>
+                <type>text</type>
+                <label>Content of file</label>
+                <var>content</var>
+            </input>
+            <input>
+                <type>dropdown</type>
+                <options>ubuntu;centos;all</options>
+                <label>Hostgruppe</label>
+                <var>hosts</var>
+            </input>
+            <!--
+                <input>
+                    <type>password</type>
+                    <label>Passwort</label>
+                    <var>psw</var>
+                </input>
+                <input>
+                    <type>checkbox</type>
+                    <label>Ausgaben aktivieren?</label>
+                    <var>log</var>
+                </input>
+            -->
+        </form>
+    </task>
+</xml>
