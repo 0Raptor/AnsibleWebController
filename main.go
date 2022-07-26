@@ -224,7 +224,7 @@ func getTaskTable() string {
 			// create button to fire job (with data from form)
 			replacewith += "</td><td align =\"right\" class=\"stop-stretching\"><input type=\"submit\" form=\"taskForm" + no + "\" value=\"Start\"/></td></tr>"
 		} else { // else use a normal button to fire job
-			replacewith += "</td><td align =\"right\" class=\"stop-stretching\"><a href=\"run?id=" + no + "\" class=\"button\">Start</a></right></td></tr>"
+			replacewith += "</td><td align =\"right\" class=\"stop-stretching\"><a href=\"run?id=" + no + "\" class=\"button\">Start</a></td></tr>"
 		}
 	}
 
@@ -311,6 +311,7 @@ func runtask(w http.ResponseWriter, r *http.Request) {
 			tmp, err := strconv.Atoi(v[0])
 			if err == nil {
 				taskid = tmp
+				break
 			} else {
 				w.Write([]byte("500: Internal Server Error\nFailed to parse given id\n"))
 				return
@@ -333,7 +334,7 @@ func runtask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// prepare logging
-	lognr, err := strconv.Atoi(readFile(logdir + "/cntr")) // load last job id                                           // get next
+	lognr, err := strconv.Atoi(strings.Replace(readFile(logdir+"/cntr"), "\n", "", -1)) // load last job id, remove new lines                                           // get next
 	if err != nil {
 		w.Write([]byte("500: Internal Server Error\nFailed to parse current job id\n"))
 		return
@@ -341,18 +342,18 @@ func runtask(w http.ResponseWriter, r *http.Request) {
 	lognr += 1
 	writeFile(logdir+"/cntr", strconv.Itoa(lognr)) // write new job id back
 
-	// apped >> to output to logdir
+	// apped > to output to logdir
 	now := time.Now() //get current time
 	datetime := strconv.Itoa(now.Day()) + "." + strconv.Itoa(numericDatetimeMonth(now.Month())) + "." + strconv.Itoa(now.Year()) + " " +
 		strconv.Itoa(now.Hour()) + "." + strconv.Itoa(now.Minute()) + "." + strconv.Itoa(now.Second()) //parse time to string
 	logfilename := "Job " + strconv.Itoa(lognr) + " - Task " + strconv.Itoa(taskid) + " - " + datetime + ".log" //create name for logfile
-	cmd += " > " + logdir + "/" + logfilename                                                                   // update cmd with new data
+	cmd += " > \"" + logdir + "/" + logfilename + "\""                                                          // update cmd with new data
 
 	// debug
-	log.Printf("Going to execute: %s", cmd)
+	//log.Printf("Going to execute: %s", cmd)
 
 	// run command in shell
-	shell := exec.Command(cmd)
+	shell := exec.Command("bash", "-c", cmd) // fork new shell (so awc does not wait) and give command to execute as argument (c)
 	err = shell.Start()
 	if err != nil {
 		log.Fatal(err)
@@ -362,8 +363,8 @@ func runtask(w http.ResponseWriter, r *http.Request) {
 
 	//navigate back to main
 	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte("<html><head><meta http-equiv=\"refresh\" content=\"0; URL=?=Executed Task " + strconv.Itoa(taskid) + " as Job " + strconv.Itoa(lognr) + "\"></head>" +
-		"<body>If you are not redirected automatically, follow this <a href=\"?started=" + strconv.Itoa(taskid) + " as Job " + strconv.Itoa(lognr) + "\">Link</a></body></html>"))
+	w.Write([]byte("<html><head><meta http-equiv=\"refresh\" content=\"0; URL=/?started=Executed Task " + strconv.Itoa(taskid) + " as Job " + strconv.Itoa(lognr) + "\"></head>" +
+		"<body>If you are not redirected automatically, follow this <a href=\"/?started=" + strconv.Itoa(taskid) + " as Job " + strconv.Itoa(lognr) + "\">Link</a></body></html>"))
 }
 
 func showlog(w http.ResponseWriter, r *http.Request) {
@@ -413,12 +414,17 @@ func showlog(w http.ResponseWriter, r *http.Request) {
 }
 
 func reload(w http.ResponseWriter, r *http.Request) {
+	// Reload configuration and tasks
 	log.Print("Reloading AWC configuration...")
 	loadConfig(confpath)
 	log.Print("Configuration loaded.")
 	loadTasks(commandspath)
 	log.Print("Commands loaded.")
 	log.Print("DONE. Port change will be ignored.")
+
+	// Redirect to main page
+	w.Write([]byte("<html><head><meta http-equiv=\"refresh\" content=\"0; URL=/?started=Reloaded configuration\"></head>" +
+		"<body>If you are not redirected automatically, follow this <a href=\"/?started=Reloaded configuration\">Link</a></body></html>"))
 }
 
 func main() {
