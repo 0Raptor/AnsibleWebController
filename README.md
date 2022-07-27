@@ -16,7 +16,9 @@ This application was created for people who want to run scripts remotely without
     - [Configuration](#configuration)
       - [Managing Settings](#managing-settings)
       - [Defining Tasks](#defining-tasks)
+  - [API Usage](#api-usage)
   - [Upgrading](#upgrading)
+  - [Support Me](#support-me)
   - [Legal Notice](#legal-notice)
   - [License](#license)
 
@@ -62,11 +64,13 @@ sudo yum install epel-release
 sudo yum install ansible
 ```
 
-2. Create user to run Playbooks (NOT part of sudo-group)
+2. Create user to run Playbooks (NOT part of sudo-group) and deny ssh login
 
 ```Bash
 sudo useradd ansible -m
 sudo passwd ansible
+
+echo "DenyUsers ansible" >> /etc/ssh/sshd_config
 ```
 
 3. Setup demo Ansible files
@@ -172,7 +176,7 @@ exit
 ```Bash
 sudo su - ansible
 
-# WARN - Only run this command the first time you set up a managed node (DO NOT RUN IT IF YOU ALREADY HAVE A PRIVATE SSH KEY)
+# WARN - Only run ssh-keygen command the first time you set up a managed node (DO NOT RUN IT IF YOU ALREADY HAVE A PRIVATE SSH KEY)
 # generate private ssh key
 ssh-keygen
     # just hit enter without providing any text to questions
@@ -190,6 +194,8 @@ ssh-copy-id ansible@<FQDN> #-p 12345 # add the -p argument when using a custom p
 # create folders in user's folder
 sudo mkdir -p /home/ansible/awc
 sudo mkdir -p /home/ansible/logs
+# prepare log counter
+echo "0" > /home/ansible/logs/cntr
 # download the binary and unzip it into the created folders
 curl -O https://git.0raptor.earth/attachments/40809c62-b93b-4156-bb0d-a84329ed3c07
 sudo unzip AWC-Linux_AMD64.zip -d /home/ansible/awc
@@ -311,6 +317,9 @@ openssl dhparam -out /etc/httpd/ssl/dhparam.pem 4096 # generate dhparam
 mv awc.key /etc/httpd/ssl/ # import website's private key
 mv awc.crt /etc/httpd/ssl/ # import website's certificate
 mv intermediate.crt /etc/httpd/ssl/ # import intermediate/ issuer certificate
+
+# remove read access on certs for non root users
+chmod 660 /etc/httpd/*
 
 # allow httpd to read it
 semanage fcontext -a -t httpd_sys_content_t "/etc/httpd/ssl(/.*)?"
@@ -439,10 +448,35 @@ This application is highly customizable. You can (almost) the complete GUI witho
         - The task will have two inputs: one with `var=path` and a second with `var=content`
       - It is useless to define an input if the **var** is not used inside the **command**
 
+## API Usage
+
+This application is designed to be used by a human operating on the webpage. Nevertheless, tasks can be executed and the configuration can be reloaded through API requests.
+
+- Execute a task
+  - `http[s]://<YOUR DOMAIN NAME>/run?id=<TASK ID>[&<VAR>=<VALUE>]*`
+  - Tasks are executed via the `/run` URL
+    - You have to deliver at least the *id*
+      - The tasks in `commands.xml` get their IDs from top to button starting with 0
+      - The first task has id 0, the second id 1 and so on
+    - If your task has inputs you have to deliver values to them
+      - Each value is delivered starting with a `&` followed by the string specified in the `var` container an `=` and the value you want to assign to the variable
+      - Make sure to supply all inputs - The API will NOT validate your data
+- Reload Configuration
+  - `http[s]://<YOUR DOMAIN NAME>/refresh`
+  - This will apply changes in `settings.xml` (only *logdir*) and `commands.xml`
+  - A changed port can only be applied by restarting the service
+
+Remember to supply your credentials when using the reverse proxy with *HTTP Basic Authentication*.
+
 ## Upgrading
 
 After a new release you can replace the binary (`awc`) and html-files with the new binary and html-files. I am trying to ensure that everything around it (logs' directory, configuration files and service) will be compatible.  
 When using SELinux you have to relabel the binary after an upgrade using `sudo restorecon -v /home/ansible/awc/awc`!
+
+## Support Me
+
+You like my application? I would be thankful for a small donation to finance my infrastructure (or the next cup of coffee).
+[Donate via "Buy Me A Coffee"](https://www.buymeacoffee.com/0Raptor)
 
 ## Legal Notice
 

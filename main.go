@@ -121,6 +121,19 @@ func clearString(str string) string {
 	return nonAlphanumericRegex.ReplaceAllString(str, "")
 }
 
+func validateLogdir() {
+	// validate "cntr"-file exists
+	if _, err := os.Stat(logdir + "/cntr"); err == nil { //file exists
+		// validate content
+		if _, err := strconv.Atoi(strings.Replace(readFile(logdir+"/cntr"), "\n", "", -1)); err != nil {
+			// file contains invalid data --> reset
+			writeFile(logdir+"/cntr", "0")
+		}
+	} else { //file does not exsit or other error
+		writeFile(logdir+"/cntr", "0")
+	}
+}
+
 func numericDatetimeMonth(month time.Month) int {
 	switch month {
 	case time.January:
@@ -198,7 +211,11 @@ func getTaskTable() string {
 				if tasks.Task[i].Form.Input[j].Kind != "dropdown" {
 					// create inputs other than dropdowns
 					replacewith += "<tr><td><label for=\"" + tasks.Task[i].Form.Input[j].Label + "\">" + tasks.Task[i].Form.Input[j].Label + "</label></td>" //label to descripe input
-					replacewith += "<td><input type=\"" + tasks.Task[i].Form.Input[j].Kind + "\" name=\"" + tasks.Task[i].Form.Input[j].Variable + "\" id=\"" + tasks.Task[i].Form.Input[j].Variable + "\" required></td></tr>"
+					if tasks.Task[i].Form.Input[j].Kind != "checkbox" {
+						replacewith += "<td><input type=\"" + tasks.Task[i].Form.Input[j].Kind + "\" name=\"" + tasks.Task[i].Form.Input[j].Variable + "\" id=\"" + tasks.Task[i].Form.Input[j].Variable + "\" required></td></tr>"
+					} else { // don't use required option on checkboxes (otherwise user cannot enter 'false')
+						replacewith += "<td><input type=\"" + tasks.Task[i].Form.Input[j].Kind + "\" name=\"" + tasks.Task[i].Form.Input[j].Variable + "\" id=\"" + tasks.Task[i].Form.Input[j].Variable + "\"></td></tr>"
+					}
 				} else { //create dropdown menu
 					replacewith += "<tr><td><label for=\"" + tasks.Task[i].Form.Input[j].Variable + "\">" + tasks.Task[i].Form.Input[j].Label + "</label></td>" //label to descripe input
 
@@ -323,6 +340,12 @@ func runtask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// validate task id
+	if taskid >= len(tasks.Task) {
+		w.Write([]byte("404: Not Found\nRequested task does not exist\n"))
+		return
+	}
+
 	// load command
 	cmd := tasks.Task[taskid].Command
 
@@ -422,6 +445,9 @@ func reload(w http.ResponseWriter, r *http.Request) {
 	log.Print("Commands loaded.")
 	log.Print("DONE. Port change will be ignored.")
 
+	// validate logdir contains "cntr"-file
+	validateLogdir()
+
 	// Redirect to main page
 	w.Write([]byte("<html><head><meta http-equiv=\"refresh\" content=\"0; URL=/?started=Reloaded configuration\"></head>" +
 		"<body>If you are not redirected automatically, follow this <a href=\"/?started=Reloaded configuration\">Link</a></body></html>"))
@@ -445,6 +471,9 @@ func main() {
 	log.Print("Configuration loaded.")
 	loadTasks(commandspath)
 	log.Print("Commands loaded.")
+
+	// validate logdir contains "cntr"-file
+	validateLogdir()
 
 	// Start http listening to port 8080 - in case of crash, log it to console
 	log.Printf("AWC starts listening on %s...", port)
