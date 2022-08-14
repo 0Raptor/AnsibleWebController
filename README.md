@@ -13,6 +13,7 @@ This application was created for people who want to run scripts remotely without
   - [Setup](#setup)
     - [Environment](#environment)
     - [Installation](#installation)
+      - [Use Ansible-Vault insted of sudoers](#use-ansible-vault-insted-of-sudoers)
     - [Configuration](#configuration)
       - [Managing Settings](#managing-settings)
       - [Defining Tasks](#defining-tasks)
@@ -42,6 +43,8 @@ Compiling: [GO](https://go.dev/)
 This application is NOT designed for production use! You may use it for testing or in home lab environments.  
 DO NOT run this application as root! Once configured the commands can be executed with any parameter. You have to make sure that the parameter will not endanger your system. I recommend using a non root user that can only connect to the Ansible clients via SSH.  
 Currently there is no authentication included in this application. I recommend blocking the application's port via a firewall and only allow access to the application from localhost or a reverse proxy with authentication (see Installation).
+
+Following the setup instructions, you will not be able to make system-level changes (e.g. updates) to the server that runs Ansible itself. This is a security measure, but you could grant more privileges to the user running the web-application at your own risk.
 
 The included HTML UI/ front-end is (to be kind) very simple. If the UI does not appeal to you and you are a better front-end developer then I am, I designed this application so you can change the complete UI without having to touch or recompile the binary. Just change the files inside the HTML directory to your needs!
 
@@ -147,6 +150,10 @@ localhost
 
 Create a user that Ansible will connect to on the managed nodes. This user will be part of the sudo group so Ansible will be able to execute tasks that require root privileges. The user will be configured so it can use `sudo` without entering a password (so that no password has to be provided to Ansible).
 
+> **HINT**  
+> Instead of allowing the user to use "sudo" without entering its password, you might supply the password to Ansible. Do not store it in plaintext on your Ansible controller - use `ansible-vault`!  
+> [Click here to get instructions]](#use-ansible-vault-insted-of-sudoers)
+
 ```Bash
 sudo su -
 
@@ -160,8 +167,8 @@ sudo usermod -aG sudo ansible
 echo "ansible ALL=(ALL:ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # disable ssh login to user
-echo "Match User ansible" >> nano /etc/ssh/sshd_config
-echo "        PasswordAuthentication no" >> nano /etc/ssh/sshd_config
+echo "Match User ansible" >> /etc/ssh/sshd_config
+echo "        PasswordAuthentication no" >> /etc/ssh/sshd_config
 
 # STOP! complete step 5 first - then enter the last two commands on the managed node
 
@@ -178,7 +185,7 @@ sudo su - ansible
 
 # WARN - Only run ssh-keygen command the first time you set up a managed node (DO NOT RUN IT IF YOU ALREADY HAVE A PRIVATE SSH KEY)
 # generate private ssh key
-ssh-keygen
+ssh-keygen -t ecdsa -b 521
     # just hit enter without providing any text to questions
 
 # copy public ssh key to managed node so Ansible can log in with its private key
@@ -319,7 +326,7 @@ mv awc.crt /etc/httpd/ssl/ # import website's certificate
 mv intermediate.crt /etc/httpd/ssl/ # import intermediate/ issuer certificate
 
 # remove read access on certs for non root users
-chmod 660 /etc/httpd/*
+chmod 660 /etc/httpd/ssl/*
 
 # allow httpd to read it
 semanage fcontext -a -t httpd_sys_content_t "/etc/httpd/ssl(/.*)?"
@@ -387,6 +394,42 @@ SSLOpenSSLConfCmd DHParameters "/etc/httpd/ssl/dhparam.pem"
     </Proxy>
 </virtualhost>
 
+```
+
+#### Use Ansible-Vault insted of sudoers
+
+If you feel uncomfortable allowing a user to use root-privileges without entering a password, you can use the following commands on the server with Ansible installed instead of performing "echo "ansible ALL=(ALL:ALL) NOPASSWD:ALL" >> /etc/sudoers" on each node.
+
+The password for the ansible-user on the nodes will be stored encrypted on the server and will be read and send to the node by Ansible when it is running a playbook on the node.
+
+```Bash
+cd /home/ansible
+mkdir vars
+cd vars
+head -c 250 /dev/random | base64 | head -c 250 > vault.pass # generate random password
+
+# create vault using the password file
+ansible-vault create vault.yml --vault-password-file vault.pass
+  # file will be opened in vi-editor
+  # tap i to get into insert mode and add the content below
+  # tap ESC (to stop editing), type :w and hit enter (to save) and type :q and hit enter (to quit)
+```
+
+```YML
+ansible_port: 12345 # you can also specify your custom-ssh-port here once instead in each playbook
+ansible_sudo_pass: "YOUR PASSWORD FOR THE ANSIBLE USER ON THE MANAGED NODES"
+```
+
+You can edit the contents of your vault at any time using `ansible-vault edit vault.yml --vault-password-file vault.pass`. If you sync your playbooks via git, you should consider adding `vault.pass` to your `.gitignore`-file so not everybody can read your passwords.
+
+To use the variables in your vault you have to include it in every playbook, using the following code before defining your tasks. Furthermore, you have to call the playbook with an additional argument containing the path to your password-file (e.g. `ansible-playbook create-testfile.yml --vault-password-file ../vars/vault.pass -i ../inventory/hosts`).
+
+```YML
+vars_files:
+  - ../vars/vault.yml
+
+tasks:
+  - [...]
 ```
 
 ### Configuration
