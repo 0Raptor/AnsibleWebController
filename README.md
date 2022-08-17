@@ -473,7 +473,8 @@ This application is highly customizable. You can (almost) the complete GUI witho
       - *password*
         - Like a normal text, but the input is \*\*\*-out on the web page
       - *checkbox*
-        - The user may check the box: checked --> true
+        - The user may check the box
+        - Is the box checked, the value will be `on`. Otherwise, there is no value transmitted and `??<VAR-name>??` will be used in the command
       - *dropdown*
         - Creates a drop-down list the user can select an item from
         - You have to specify the available items in an `options` container: Its nested inside `input`, too
