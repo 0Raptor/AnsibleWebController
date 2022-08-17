@@ -32,7 +32,7 @@ import (
 	"time"
 )
 
-//GlOBAL CONST VARS
+// GlOBAL CONST VARS
 var confpath = "config/settings.xml"
 var commandspath = "config/commands.xml"
 
@@ -185,6 +185,9 @@ func loadConfig(path string) {
 func loadTasks(path string) {
 	// Read XML File
 	byteValue := readXmlFile(path)
+
+	// Drop known tasks
+	tasks = Tasks{}
 
 	// Parse in tasks struct for further access
 	xml.Unmarshal(byteValue, &tasks)
