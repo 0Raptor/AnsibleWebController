@@ -1,0 +1,30 @@
+---
+
+# only systems using apt as package manager
+
+- hosts: "{{ targets }}"
+  become: yes
+  gather_facts: no
+
+  vars_files:
+    - ../vars/vault.yml
+  
+  tasks:
+    - name: Copy .deb to target system
+      copy:
+        dest: /tmp/newpackage.deb
+        src: "{{ path }}"
+        owner: root
+        group: root
+        mode: 0600
+      when: isurl != "on"
+    
+    - name: Install .deb package
+      apt:
+        deb: /tmp/newpackage.deb
+      when: isurl != "on"
+    
+    - name: Install .deb package from URL
+      apt:
+        deb: "{{ path }}"
+      when: isurl == "on"

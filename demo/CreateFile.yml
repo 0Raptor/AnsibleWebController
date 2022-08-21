@@ -1,0 +1,17 @@
+---
+
+# run: ansible-playbook CreateFile.yml --vault-password-file ../vars/vault.pass -i ../inventory/hosts
+# supply targets, path & content: --extra-vars "tagets=testme path=/home/admphil/test.txt [...]"
+
+hosts: "{{ targets }}"
+  become: yes
+  gather_facts: no
+
+  vars_files:
+    - ../vars/vault.yml
+
+  tasks:
+  - name: Creating a test file with content
+    copy:
+      dest: "{{ path }}"
+      content: "{{ content }}"

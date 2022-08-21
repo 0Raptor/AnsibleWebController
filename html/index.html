@@ -24,20 +24,24 @@
         <div>??executionReport??</div>
         <div style="border:1px solid black; padding: 0px 5px 5px; overflow: hidden;"> <!-- top 0, right/left 5, buttom 5 -->
             <h1>Ansible Web Controller</h1>
-            <a href="reload" class="button">Reload configuration</a>
-            <div style="border:1px solid black; padding: 0px 5px 5px; max-height: 50%;">
+            <a href="reload" class="button">Reload configuration</a><br />
+            <div style="border:1px solid black; padding: 0px 5px 5px; max-height: 48%; overflow: auto; overflow-y: scroll; overflow-x: hidden;">
                 <h2>Tasks</h2>
                 <table style="width: 100%;" frame=void rules=rows>
                     ??taskList??
                 </table>
             </div>
             <br />
-            <div style="border:1px solid black; padding: 0px 5px 5px; max-height: 40%;">
+            <div style="border:1px solid black; padding: 0px 5px 5px; max-height: 30%; overflow: auto; overflow-y: scroll; overflow-x: hidden;">
                 <h2>Reports</h2>
                 <table style="width: 100%;" frame=void rules=rows">
                     ??logList??
                 </table>
             </div>
+				<footer>
+					2022 - Powered by 0Raptor<br />
+					<a href="https://github.com/0Raptor/AnsibleWebController">View sourcecode on GitHub</a> - <a href="https://www.buymeacoffee.com/0Raptor">Support the developer</a>
+				</footer>
         </div>
     </body>
 </html>

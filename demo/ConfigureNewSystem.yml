@@ -1,0 +1,152 @@
+---
+
+# To target a specific host use the following command (comma at the ending is important!) - you may specify multiple hosts as comma-separated list (then no comma at the end is required)
+# ansible-playbook ConfigureNewSystem.yml -i 10.10.10.10,
+
+- hosts: all
+  become: yes
+  gather_facts: no
+
+  vars:
+    ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
+    required_software:
+      - sudo
+    unnecessary_services:
+      - postfix
+      - telnet
+    unnecessary_software:
+      - tcpdump
+      - nmap-ncat
+      - wpa_supplicant
+    ssh_users:
+      - { name: "bigboss", key: "{{ lookup('file', '../vars/default-configs/bigboss-id_ecdsa.pub') }}" }
+
+  vars_files:
+    - ../vars/vault.yml
+
+  # parse extra-vars to ansible-system-values
+  pre_tasks:
+    - name: Get password for ansible user (to create later) from vault
+      set_fact:
+        newpasswd: "{{ ansible_sudo_pass | password_hash('sha512') }}"
+      run_once: true
+
+    - name: Get connection config
+      set_fact:
+        ansible_port: "{{ port }}"
+        ansible_user: "{{ user }}"
+        ansible_ssh_pass: "{{ passwd }}"
+      run_once: true
+  
+    - name: Get ansible_sudo_pass from SSH Password
+      set_fact:
+        ansible_sudo_pass: "{{ passwd }}"
+      when: rootpasswd == "0"
+      run_once: true
+    
+    - name: Get ansible_become_password from Root Password
+      set_fact:
+        ansible_become_password: "{{ rootpasswd }}"
+        ansible_become_method: su
+      when: rootpasswd != "0"
+      run_once: true
+
+  tasks:
+    # update system packages
+    - name: Perform full patching
+      apt:
+        name: '*'
+        state: latest
+
+    # create ansible user and group
+    - name: Add ansible group
+      group:
+        name: ansible
+        state: present
+
+    - name: Add ansible user
+      user:
+        name: ansible
+        group: ansible
+        groups: ansible, sudo
+        password: "{{ newpasswd }}"
+        update_password: on_create
+        shell: /bin/bash
+        home: /home/ansible
+        create_home: yes
+        state: present
+
+    # configure ssh access
+    - name: Add SSH public key for managment user
+      authorized_key:
+        user: "{{ item.name }}"
+        key: "{{ item.key }}"
+        state: present
+      with_items: "{{ ssh_users }}"
+      when: nomgmtkeys != "on"
+    
+    - name: Add SSH public key for ansible user
+      authorized_key:
+        user: ansible
+        key: "{{ lookup('file', '/home/ansible/.ssh/id_ecdsa.pub') }}"
+        state: present
+
+    - name: Add hardened SSH config and restart sshd service
+      copy:
+        dest: /etc/ssh/sshd_config
+        src: ../vars/default-configs/sshd_config
+        owner: root
+        group: root
+        mode: 0600
+      notify: Reload SSH
+
+    # install required ackages
+    - name: Install required packages
+      apt:
+        name: "{{ required_software }}"
+        state: latest
+
+    # harden system by removing undesirable packages and disableing unnecessary services
+    - name: Remove undesirable packages
+      package:
+        name: "{{ unnecessary_software }}"
+        state: absent
+
+    - name: Stop and disable unnecessary services
+      service:
+        name: "{{ item }}"
+        state: stopped
+        enabled: no
+      with_items: "{{ unnecessary_services }}"
+      ignore_errors: yes
+
+    # set login messages
+    - name: Set a message of the day
+      copy:
+        dest: /etc/motd
+        src: ../vars/default-configs/motd
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Set a login banner
+      copy:
+        dest: "{{ item }}"
+        src: ../vars/default-configs/loginbanner
+        owner: root
+        group: root
+        mode: 0644
+      with_items:
+        - /etc/issue
+        - /etc/issue.net
+    
+    - name: Info
+      debug:
+        msg: "I recommend to connect to the machine and update your root and/ or ssh-user password NOW! Moreover, don't forget to add this host to your inventory."
+
+  handlers:
+    - name: Reload SSH
+      service:
+        name: sshd
+        state: reloaded
+        
