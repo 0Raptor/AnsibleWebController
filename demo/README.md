@@ -1,20 +1,21 @@
 # Ansible Web Controller - Demo Files
 
 This directory includes some Ansible-Playbooks and their matching configuration for AWC in this README.  
-You can use this information as a base to create your own set of playbooks or even use them in your system.
+You can use this information as a base to create your own set of Playbooks or even use them in your system.
 
 - [Ansible Web Controller - Demo Files](#ansible-web-controller---demo-files)
-  - [Update Debian & Ubuntu Hosts (hosts using apt)](#update-debian--ubuntu-hosts-hosts-using-apt)
+  - [Update Debian & Ubuntu Hosts (using apt)](#update-debian--ubuntu-hosts-using-apt)
+  - [Manage specific packages (using apt)](#manage-specific-packages-using-apt)
   - [Install custom .deb (copy to host or from url)](#install-custom-deb-copy-to-host-or-from-url)
   - [Create Test File on Hosts](#create-test-file-on-hosts)
   - [Configure New System](#configure-new-system)
 
-All Playbooks are set up to use Ansible-Vault.  
+All Playbooks are set up to use Ansible-Vault (containing the sudo-password of the Ansible-User on the node).  
 You have to add the XML-code below between the outer xml-brakets (`<xml> CODE GOES HERE </xml>`) in the `commands.xml`.
 
-## Update Debian & Ubuntu Hosts (hosts using apt)
+## Update Debian & Ubuntu Hosts (using apt)
 
-Updates all managed Debian- and Ubuntu hosts using `apt`. Use can decide whether to use a normal `upgrade` or a `dist-upgrade` and if the host may reboot if required.
+Updates all managed Debian- and Ubuntu hosts using `apt`. You can decide whether to use a normal `upgrade` or a `dist-upgrade` and if the host may reboot if required.
 
 [View Playbook](UpdateApt.yml)
 
@@ -48,6 +49,48 @@ Inputs:
 ```
 
 *The `var` name in the xml-file does not have to match its name in the Playbook. You have to assign them in the `command`'s `--extra-vars "[...]"`-section (compare `allowrestart=??restart??` above).*
+
+## Manage specific packages (using apt)
+
+Installs, updates or removes given packages on given managed Debian- and Ubuntu host(s) using `apt`.
+
+[View Playbook](ManagePackage.yml)
+
+Requires:
+
+- inventory-file
+- vault password
+
+Inputs:
+
+- hosts - List (comma-separated without spaces) of host-ips, host-names, hostgroup-names or just one of these values) to modify the packages on
+- packages - List (comma-separated without spaces) of packages to modify on hosts using `apt`
+- method - Install, remove or update the packages on the hosts
+
+```XML
+<task>
+        <name>Einzelne Pakete verwalten (APT)</name>
+        <command>ansible-playbook /home/ansible/ansible/playbooks/ManagePackage.yml -i /home/ansible/ansible/inventory/hosts --vault-password-file /home/ansible/ansible/vars/vault.pass --extra-vars "method=??method?? packages=??packages?? targets=??hosts??"</command>
+        <form>
+            <input>
+                <type>text</type>
+                <label>Hosts (IP, Hostgruppe, kommaseparierte Liste ohne Leerzeichen möglich)</label>
+                <var>hosts</var>
+            </input>
+            <input>
+                <type>text</type>
+                <label>Pakete (kommaseparierte Liste ohne Leerzeichen möglich</label>
+                <var>packages</var>
+            </input>
+            <input>
+                <type>dropdown</type>
+                <options>install;remove;update</options>
+                <label>Methode</label>
+                <var>method</var>
+            </input>
+        </form>
+    </task>
+```
 
 ## Install custom .deb (copy to host or from url)
 
@@ -90,7 +133,7 @@ Inputs:
 </task>
 ```
 
-*If you want the option to just pass ONE host or hostgroup into a variable that will be used to define `- hosts: "{{ targets }}"` you have to always add a comma to the end of the string (so Ansible thinks it is a valid list) (compare `targets=??hosts??,` above)*
+*If you want the option to just pass ONE host or hostgroup into a variable that will be used to define `- hosts: "{{ targets }}"` you have to always add a comma to the end of the string (so Ansible thinks it is a valid list) (compare `targets=??hosts??,` above). You may also add the comma in the Playbook (compare Playbook of [Manage specific packages (using apt)](#manage-specific-packages-using-apt))*
 
 ## Create Test File on Hosts
 

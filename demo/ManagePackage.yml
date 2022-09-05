@@ -1,0 +1,25 @@
+---
+# works for ubuntu & debian
+- hosts: "{{ targets }},"
+  become: yes
+  gather_facts: no
+
+  vars_files:
+    - ../vars/vault.yml
+
+  pre_tasks:
+    - name: Get "state" for apt-command
+      set_fact:
+        aptstate: "{{ method | replace('install', 'latest') | replace('remove', 'absent') | replace('update', 'latest') }}"
+      run_once: true
+
+  tasks:
+    - name: Update package cache if updating or installing
+      apt:
+        update_cache: yes
+      when: aptstate == "latest"
+
+    - name: Modify installed packages
+      apt:
+        name: "{{ packages }}"
+        state: "{{ aptstate }}"
