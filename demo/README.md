@@ -69,17 +69,17 @@ Inputs:
 
 ```XML
 <task>
-        <name>Einzelne Pakete verwalten (APT)</name>
+        <name>Manage selected packages (APT)</name>
         <command>ansible-playbook /home/ansible/ansible/playbooks/ManagePackage.yml -i /home/ansible/ansible/inventory/hosts --vault-password-file /home/ansible/ansible/vars/vault.pass --extra-vars "method=??method?? packages=??packages?? targets=??hosts??"</command>
         <form>
             <input>
                 <type>text</type>
-                <label>Hosts (IP, Hostgruppe, kommaseparierte Liste ohne Leerzeichen möglich)</label>
+                <label>Hosts (IPs, Hostgroups: comma-separated-list without spaces possible)</label>
                 <var>hosts</var>
             </input>
             <input>
                 <type>text</type>
-                <label>Pakete (kommaseparierte Liste ohne Leerzeichen möglich</label>
+                <label>Packages (comma-separated-list without spaces possible)</label>
                 <var>packages</var>
             </input>
             <input>
